@@ -58,7 +58,7 @@ module.exports.getAccountsCount = () => {
   return accouts.length;
 }
 
-module.exports.cookieParse = function(set_cookies = []){
+module.exports.cookieParse = (set_cookies = []) => {
   if( ! (set_cookies instanceof Array)){
     return '';
   }
@@ -74,22 +74,24 @@ module.exports.cookieParse = function(set_cookies = []){
 
 module.exports.getAccountCookie = async (username, password, login = false) => {
   let path = 'cookies/'+username+'.txt';
-  if (fs.existsSync(path)) {
+
+  if (await fs.existsSync(path)) {
       let data =  fs.readFileSync(path, 'utf-8');
 
       if(data){
         const list = data.split(';');
-        if(list[1]) return list[1];
+        if(list[1]) 
+          return list[1];
       }
-
-      return '';
-  }else if(login){
+  }
+  
+  if(login){
 
      const result = await action.login(username,password);
 
      if(result.confirm){
          await file.saveCookie(username, result.cookies);
-         return this.getAccountCookie(username, password);
+         return this.getAccountCookie(username, password, false);
      }
   }
   return '';
@@ -97,4 +99,23 @@ module.exports.getAccountCookie = async (username, password, login = false) => {
 
 module.exports.isNumeric = (value) => {
   return /^-?\d+$/.test(value);
+}
+
+
+module.exports.shuffle = (array)  => {
+  let currentIndex = array.length,  randomIndex;
+
+  // While there remain elements to shuffle.
+  while (currentIndex != 0) {
+
+    // Pick a remaining element.
+    randomIndex = Math.floor(Math.random() * currentIndex);
+    currentIndex--;
+
+    // And swap it with the current element.
+    [array[currentIndex], array[randomIndex]] = [
+      array[randomIndex], array[currentIndex]];
+  }
+
+  return array;
 }

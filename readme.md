@@ -1,23 +1,11 @@
-Wordpress bir sitesi nasıl manipüle edilir?
--Node.js ile oluşturmuş olduğum basit otomasyon temel mantığı anlayıp ilerletmek üzerine tasarlanmıştır.
-Hedef site dizibox
- Fonksiyonlar;
- ;oturum aç
- ;kayıt ol
- ;yorumu beğen/beğenme
+# DIZIBOX TOOL v0.1
+Bu araç windows cli ile işlemler yapmak için oluşturulmuştur.
 
-## Kurulum
+## KURULUM
+`npm instal`
 
-> npm install
-
-## Fonksiyonlar
-npm run hesapolustur
-(Promp içerisinde seçtiğiniz miktar hesap oluşturur.)
-npm run girisyap
-(Oluşturulan hesapların cookie bilgilerini kaydeder.)
-npm run begen
-(Oluşturulan hesaplarla limitlediğiniz miktarda yoruma beğen/beğenme gönderir.)
+## ÇALIŞTIRMA
+`npm start`
 
 
- 
-Not: İlgili siteye zarar verilmek istenmemiştir!
+![VIDEO](./docs/diziboxtool.gif)

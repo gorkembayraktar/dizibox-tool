@@ -4,7 +4,7 @@ const endpoints = require('./endpoints');
 
 const FormData = require('form-data');
 
-const {cookieParse} = require('./help')
+const help = require('./help')
 
 
 module.exports.createAccount = async function(account, callback,error){
@@ -43,7 +43,7 @@ module.exports.createAccount = async function(account, callback,error){
 }
 
 
-module.exports.login = async function(username, password){
+module.exports.login = async (username, password) => {
 
   const data = new FormData();
 
@@ -64,23 +64,39 @@ module.exports.login = async function(username, password){
   };
   
   return await axios(config)
-  .then(function (response) {
-    return ({
-      status:response.status,
-      cookies:cookieParse(response.headers['set-cookie']),
-      confirm:loginResolver(response.data)
-    });
-  })
+  .then(
+    (function (response) {
+
+      return {
+        status:response.status,
+        cookies:help.cookieParse(response.headers['set-cookie']),
+        confirm:this.loginResolver(response.data)
+      };
+    }).bind(this)
+  ).catch(function(err){
+    console.log(err)
+     return {
+      confirm: false,
+      status: err.response.status
+     }
+  });
 
 }
 
 
-function loginResolver(response){
+module.exports.loginResolver = (response) => {
     return response.loggedin;
 }
 
 
 module.exports.like = async (vote, comment_id,cookie) => {
+
+  if(vote == 1){
+    vote = 'upvote';
+  }else if(vote == -1 || vote == 0){
+    vote = 'downvote';
+  }
+  
 
   const vote_nonce = await this.getVoteUniqId(cookie);
 
