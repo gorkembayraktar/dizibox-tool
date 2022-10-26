@@ -1,9 +1,9 @@
 {
   "name": "dizibox-bot",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "main": "bot.js",
   "scripts": {
-    "start":"node tool.js",
+    "start": "node tool.js",
     "begen": "node begen.js",
     "hesapolustur": "node hesapolustur.js",
     "girisyap": "node girisyap"
@@ -16,6 +16,7 @@
     "axios": "^1.1.3",
     "figlet": "^1.5.2",
     "inquirer": "^8.0.0",
+    "jsdom": "^20.0.1",
     "readline": "^1.3.0"
   }
 }

@@ -2,7 +2,7 @@ const inquirer = require('inquirer');
 const figlet = require('figlet');
 
 const HELP = require('./js/help');
-const {login,like,createAccount} = require('./js/actions');
+const {login,like,createAccount, getComments,movieVote,isMoviePage} = require('./js/actions');
 const file = require('./js/file');
 const {settings} = require('./js/settings');
 
@@ -35,10 +35,11 @@ function next2(){
                 name:'islem',
                 choices:[
                     "Hesap Oluştur",
-                    "Yoruma Oy Gönder",
-                    "Mevcut Hesap Sayısı",
+                    "Diziye Oy Ver",
+                    "Yoruma Oy Ver",
                     "Hesap Seç",
-                    "Hesapları Listele"
+                    "Hesapları Listele",
+                    "Hesap Sayısı",
                 ]
             }
     ])
@@ -49,13 +50,17 @@ function next2(){
                     await HesapSec();
                 break;
 
-                case "Yoruma Oy Gönder":
-                    await emoji();
+                case 'Diziye Oy Ver':
+                    await DiziyeOyVer();
                 break;
 
-                case 'Mevcut Hesap Sayısı':
+                case "Yoruma Oy Ver":
+                    await emojiv2();
+                break;
+
+                case 'Hesap Sayısı':
                     const count = HELP.getAccountsCount();
-                    console.log(`Toplam ${count} hesap bulundu.`);
+                    console.log(`\n ${count} hesap var. \n`);
                     question();
                 break;
                 case 'Hesapları Listele':
@@ -223,6 +228,133 @@ function HesapOlustur(){
 
 }
 
+async function DiziyeOyVer(){
+    const {url} =  await inquirer
+        .prompt([{
+                    type:'prompt',
+                    message:`Dizibox link giriniz :`,
+                    name:'url',
+                    validate: function(url){
+                        const done = this.async();
+                        if(HELP.isValidURL(url) && url.toLowerCase().includes('dizibox')){
+                            done(null, true);
+                        }else{
+                            done('Geçerli bir url giriniz');
+                        }
+                    }
+                },
+                
+    ]);
+
+    const check = await isMoviePage(url);
+
+    if(!check.status){
+        console.log("Link geçersiz!");
+        question();
+        return;
+    }
+
+    const accounts = HELP.getAccounts();
+    const count = accounts.length;
+
+    const {total} = await (inquirer
+        .prompt([
+                {
+                    type: 'prompt',
+                    name:'total',
+                    message:`Kaç adet oy göndermek istiyorsunuz ? (En fazla : ${count}) :`,
+                    validate: function(id){
+                        const done = this.async();
+                        if(!HELP.isNumeric(id)){
+                            done('Geçerli bir süre giriniz');
+                        }else if(id < 0 || id > count){
+                            done(`Lütfen 0 ile ${count} aralığında bir değer giriniz!`);
+                        }
+                        else{
+                            done(null, true);
+                        }
+                    }
+                }
+    ]));
+
+
+    const {vote,type,delay} = await (
+            inquirer
+            .prompt([
+                {
+                    type:'list',
+                    message:'Emoji tipi',
+                    name:'vote',
+                    choices:[
+                        {name:"Diziyi Beğendim!",value:1},
+                        {name:"Diziyi Beğenmedim!",value:-1}
+                    ],
+                },
+                {
+                    type:'list',
+                    message:'Liste Seçimi',
+                    name:'type',
+                    choices:[
+                        {name:`ilk ${total} hesabı kullan`,value:'first'},
+                        {name:`son ${total} hesabı kullan`,value:'last'},
+                        {name:`rastgele ${total} hesabı kullan`,value:'random'}
+                    ]
+                },
+                {
+                    type:'prompt',
+                    message:`Zaman aşımı 2 işlem arası bekleme süresi (ms) :`,
+                    name:'delay',
+                    validate: function(id){
+
+                        const done = this.async();
+
+                        if(HELP.isNumeric(id)){
+                            done(null, true);
+                        }else{
+                            done('Geçerli bir süre giriniz');
+                        }
+                    }
+                }
+            ])
+    );
+
+
+
+    const acc = {
+        first : function(){
+                return accounts.slice(total * -1);
+        },
+        last: function(){
+            return accounts.slice(0,total);
+        },
+        random : function(){
+            if(total == 0) return [];
+            return HELP.shuffle(accounts).slice(0,total);
+        }
+    }
+
+    const list = acc[type]();
+
+
+
+    for(let account of list){
+        const cookie = await HELP.getAccountCookie(account.username,account.password, true);
+        const eko = await movieVote(url,check.post_id,vote,cookie);
+
+        if(eko.status){
+            console.log(`${account.username} adlı kullanıcı diziye ${vote} oy kullandı. Dizi ortalaması ${eko.data.percentage} oldu.`);
+        }else{
+            console.log(eko.data);
+        }
+
+        await HELP.delay(delay);
+    }
+
+    await HELP.delaySec(1);
+
+    question();
+    
+}
 
 
 function question(){
@@ -402,6 +534,190 @@ async function emoji(){
 
     })
  
+}
+
+async function emojiv2(){
+
+       const {url} =  await inquirer
+        .prompt([{
+                    type:'prompt',
+                    message:`Dizibox link giriniz :`,
+                    name:'url',
+                    validate: function(url){
+                        const done = this.async();
+
+                        if(HELP.isValidURL(url) && url.toLowerCase().includes('dizibox')){
+                            done(null, true);
+                        }else{
+                            done('Geçerli bir url giriniz');
+                        }
+                    }
+                },
+                
+        ]);
+
+    
+       await comments(url);
+        
+        
+}
+
+
+async function comments(url){
+    const result = await getComments(url);
+
+    if(!result.status){
+        console.log(result.message);
+        return;
+    }
+
+    const choices = result.comments.map(user => ({name :`${user.username} : ${user.comment.substring(0,70).concat("...")} \t ( ${user.time} )` , 'value': user.comment_id}));
+
+    if(result.prev || result.next){
+        choices.push( new inquirer.Separator() );
+        choices.push( new inquirer.Separator() );
+    }
+
+    if(result.prev){
+        choices.push({
+            name:'Bir önceki sayfa',
+            value:'prev'
+        });
+    }
+
+    if(result.next){
+        choices.push({
+            name:'Bir sonraki sayfa',
+            value:'next'
+        });
+    }
+
+    if(result.prev || result.next){
+        choices.push( new inquirer.Separator() );
+        choices.push( new inquirer.Separator() );
+    }
+    const {comment} = await inquirer
+    .prompt([{
+                type:'list',
+                message:`Yorum Seçiniz`,
+                name:'comment',
+                choices: choices
+            }
+    ]);
+
+    if(comment == 'next'){
+        return comments(result.next);
+    }
+
+    if(comment == 'prev'){
+        return comments(result.prev);
+    }
+
+    const accounts = HELP.getAccounts();
+    const count = accounts.length;
+
+    const {total} = await (inquirer
+        .prompt([
+                {
+                    type: 'prompt',
+                    name:'total',
+                    message:`Kaç adet oy göndermek istiyorsunuz ? (En fazla : ${count}) :`,
+                    validate: function(id){
+                        const done = this.async();
+                        if(!HELP.isNumeric(id)){
+                            done('Geçerli bir süre giriniz');
+                        }else if(id < 0 || id > count){
+                            done(`Lütfen 0 ile ${count} aralığında bir değer giriniz!`);
+                        }
+                        else{
+                            done(null, true);
+                        }
+                    }
+                }
+        ]));
+    
+    const {vote,type,delay} = await (
+            inquirer
+            .prompt([
+                {
+                    type:'list',
+                    message:'Emoji tipi',
+                    name:'vote',
+                    choices:[
+                        {name:"Yorumu Beğendim!",value:1},
+                        {name:"Yorumu Beğenmedim!",value:-1}
+                    ],
+                },
+                {
+                    type:'list',
+                    message:'Liste Seçimi',
+                    name:'type',
+                    choices:[
+                        {name:`ilk ${total} hesabı kullan`,value:'first'},
+                        {name:`son ${total} hesabı kullan`,value:'last'},
+                        {name:`rastgele ${total} hesabı kullan`,value:'random'}
+                    ]
+                },
+                {
+                    type:'prompt',
+                    message:`Zaman aşımı 2 işlem arası bekleme süresi (ms) :`,
+                    name:'delay',
+                    validate: function(id){
+
+                        const done = this.async();
+
+                        if(HELP.isNumeric(id)){
+                            done(null, true);
+                        }else{
+                            done('Geçerli bir süre giriniz');
+                        }
+                    }
+                }
+            ])
+    );
+
+   
+    
+    const acc = {
+        first : function(){
+                return accounts.slice(total * -1);
+        },
+        last: function(){
+            return accounts.slice(0,total);
+        },
+        random : function(){
+            if(total == 0) return [];
+            return HELP.shuffle(accounts).slice(0,total);
+        }
+    }
+
+    const list = acc[type]();
+
+ 
+
+    for(let account of list){
+        const cookie = await HELP.getAccountCookie(account.username,account.password, true);
+        const eko = await like(vote, comment,  cookie);
+
+
+        if(eko.status == 200){
+            if(eko.data.success){
+                console.log(`${account.username} isimli kullanıcı ${vote} olarak oy kullandı.`);
+                console.log(`UPVOTE ${eko.data.data.upvote} , DOWNVOTE: ${eko.data.data.downvote}`);
+            }else{
+                console.log(`${account.username}: ${eko.data.data.error_message}`);
+            }
+        }else{
+            console.log(`HATA! Bağlantı kodu: ${eko.status}, mesajı: ${eko.data}`);
+            console.log(`${account.username}: Cookie bağlantısı, `, cookie);
+        }
+
+        await HELP.delay(delay);
+    }
+
+    await HELP.delaySec(1);
+
+    question();
 }
 
 

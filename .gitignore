@@ -2,3 +2,5 @@
 accounts.txt
 /cookies/*.txt
 errors.txt
+.gitignore
+test.js
