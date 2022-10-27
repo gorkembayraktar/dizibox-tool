@@ -1,10 +1,23 @@
 const inquirer = require('inquirer');
 const figlet = require('figlet');
 
+const fs = require('fs');
+
 const HELP = require('./js/help');
-const {login,like,createAccount, getComments,movieVote,isMoviePage} = require('./js/actions');
+const {login,
+    like,
+    createAccount, 
+    getComments,
+    movieVote,
+    isMoviePage,
+    movieSearch,
+    movieSeasons,
+    movieSeasonParts
+} = require('./js/actions');
 const file = require('./js/file');
 const {settings} = require('./js/settings');
+
+const stream = require('./js/stream');
 
 console.clear();
 
@@ -34,42 +47,48 @@ function next2(){
                 message:'İşlem Seçimi :',
                 name:'islem',
                 choices:[
-                    "Hesap Oluştur",
-                    "Diziye Oy Ver",
-                    "Yoruma Oy Ver",
-                    "Hesap Seç",
-                    "Hesapları Listele",
-                    "Hesap Sayısı",
+                    {name:"Dizi İndir", value:'dizi_indir'},
+                    {name:'Hesap Oluştur', value:"hesap_olustur"},
+                    {name:'Yoruma Oy Ver', value:"yoruma_oy_ver"},
+                    {name:'Diziye Oy Ver', value:"diziye_oy_ver"},
+                    {name:'Hesap Seç', value:"hesap_sec"},
+                    {name:'Hesapları Listele', value:"hesap_listele"},
+                    {name:'Hesap Sayısı', value:"hesap_sayisi"}
                 ]
             }
     ])
     .then(async (answers) => {
 
             switch(answers.islem){
-                case 'Hesap Seç':
+
+                case 'dizi_indir':
+                    await dizi_indir();
+                break;
+
+                case 'hesap_sec':
                     await HesapSec();
                 break;
 
-                case 'Diziye Oy Ver':
+                case 'diziye_oy_ver':
                     await DiziyeOyVer();
                 break;
 
-                case "Yoruma Oy Ver":
+                case "yoruma_oy_ver":
                     await emojiv2();
                 break;
 
-                case 'Hesap Sayısı':
+                case 'hesap_sayisi':
                     const count = HELP.getAccountsCount();
                     console.log(`\n ${count} hesap var. \n`);
                     question();
                 break;
-                case 'Hesapları Listele':
+                case 'hesap_listele':
                     const accounts = HELP.getAccounts();
                     console.table(accounts);
                     question()
                 break;
                 
-                case 'Hesap Oluştur':
+                case 'hesap_olustur':
                     HesapOlustur();
                 break;
 
@@ -718,6 +737,220 @@ async function comments(url){
     await HELP.delaySec(1);
 
     question();
+}
+
+let enjected = false;
+
+async function dizi_indir(){
+    
+    if(!enjected){
+        inquirer.registerPrompt(
+            'autocomplete',
+            require('inquirer-autocomplete-prompt')
+        );
+        enjected = true;
+    }
+
+    const {dizi} = await inquirer
+    .prompt([
+      {
+        type: 'autocomplete',
+        name: 'dizi',
+        message: 'Dizi adını arayınız : ',
+        source: async function(answersSoFar, input) {
+         if(input && input.length > 0){
+            const data = await movieSearch(input);
+            
+            if(data.length > 0)
+                return data.map(item => ({value:item,name:item.post_title}));
+
+            return [];
+         }
+          return []
+        },
+      },
+    ]);
+
+     await SezonSecimi(dizi.permalink);
+}
+
+async function SezonSecimi(url){
+    const seasons = await movieSeasons(url);
+
+     if(!seasons){
+        console.log("Bilgilere ulaşılamadı");
+        question();
+        return;
+     }
+
+    const {season} = await inquirer.prompt([
+        {
+            type:'list',
+            name:'season',
+            message:'Sezonu seçiniz',
+            choices:seasons.map(season => ({value:season.url,name:season.text}))
+        }
+     ]);
+
+     await SezonPartSecimi(url,season)
+}
+
+async function SezonPartSecimi(url,season){
+    const parts = await movieSeasonParts(season);
+
+     if(!parts){
+        console.log("Part Bilgilerine ulaşılamadı");
+        question();
+        return;
+     }
+     const {part} = await inquirer.prompt([
+        {
+            type:'list',
+            name:'part',
+            message:'Bölümü Seçiniz',
+            choices:parts.map(season => ({value:season.url,name:season.text})).concat([
+                new inquirer.Separator(),
+                {name:'Geri git',value:'prev'}
+            ])
+        }
+     ]);
+
+     if(part == 'prev'){
+        SezonSecimi(url)
+        return;
+     }
+
+     const {confirm} = await inquirer.prompt([
+        {
+            type:'confirm',
+            name:'confirm',
+            message:'Bölümü indirmek istiyor musunuz? '
+        }
+     ]);
+
+     if(!confirm){
+        question();
+        return;
+     }
+
+     const source = await getSource(part);
+
+
+     const qualities = await getQualities(source);
+
+
+     const {quality} = await inquirer.prompt([
+        {
+            type:'list',
+            name:'quality',
+            message:'Hangi kalitede indirmek istiyorsunuz? ',
+            choices: qualities.map(i => ({name:i.size,value:i.url}))
+        }
+     ]);
+     
+     let replay;
+     let filename;
+     do{
+        replay = false;
+
+        const f = await inquirer.prompt([
+            {
+                type:'prompt',
+                name:'filename',
+                message:'Dosya adını giriniz (mp4 olarak kaydedilecektir.)',
+                validate:function(name){
+                    const done = this.async();
+                    if(name){
+                        name = name.replace(".mp4","");
+                    }
+                    if(name && name.length >= 3){
+                        done(null, true);
+                    }else{
+                        done('Lütfen 3 karakter ve üzeri bir dosya adı giriniz');
+                    }
+                }
+            }
+        ]);
+        
+        filename = 'videos/'+f.filename.replace(".mp4","");
+
+        if(fs.existsSync(filename)){
+
+            const {confirm} = await inquirer.prompt([
+                {
+                    type:'confirm',
+                    name:'confirm',
+                    message:'Böyle bir dosya var üzerine yazmak istiyor musunuz? '
+                }
+            ]);
+        
+            replay = !confirm;
+        }
+
+    }while(replay);
+
+
+    if(!fs.existsSync("./videos")){
+        fs.mkdirSync("./videos");
+    }
+
+    await DiziKaydet(quality,filename);
+  
+}
+
+async function getSource(link){
+  //dizi kaynağını getir
+  const ui = new inquirer.ui.BottomBar();
+  const anim = ['/',"|","\\","-"];
+  let counter = 0;
+  let tickInterval = setInterval(() => {
+      ui.updateBottomBar(`${anim[counter++ % anim.length]} Video kaynağına ulaşılıyor.`);
+  },250);
+
+  await HELP.delaySec(2);
+
+  clearInterval(tickInterval);
+  ui.updateBottomBar('');
+  ui.close();
+  return stream.molyStreamUrlResource(link);
+}
+async function getQualities(link){
+  //dizi kaynağını getir
+  const ui = new inquirer.ui.BottomBar();
+  const anim = ['/',"|","\\","-"];
+  let counter = 0;
+  let tickInterval = setInterval(() => {
+      ui.updateBottomBar(`${anim[counter++ % anim.length]} Video kaliteleri getiriliyor`);
+  },250);
+
+  await HELP.delaySec(1);
+
+  clearInterval(tickInterval);
+  ui.updateBottomBar('');
+  ui.close();
+  return stream.molyStreamUrlQuality(link);
+}
+
+async function DiziKaydet(url,filename){
+
+    const ui = new inquirer.ui.BottomBar();
+  
+    ui.updateBottomBar("İndirme işlemi başlatılıyor..");
+
+
+    await stream.molyVideoDownloand(
+        url,
+        filename,
+        function(percantage, humanTime){
+            ui.updateBottomBar(`( ${percantage}% ) indiriliyor, yaklaşık ${humanTime} kaldı.`);
+        },function(){
+            ui.log.write(`İndirme işlemi tamamlandı, dosya yolu : ${filename}.mp4`);
+            ui.updateBottomBar('');
+            ui.close();
+            question();
+        }   
+    );
+
 }
 
 

@@ -4,3 +4,5 @@ accounts.txt
 errors.txt
 .gitignore
 test.js
+/videos
+*.mp4

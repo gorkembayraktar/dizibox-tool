@@ -3,6 +3,8 @@ const {settings} = require('./settings');
 const action = require('./actions');
 const file = require('./file')
 
+const CryptoJS = require("crypto-js");
+
 module.exports.makeid = function (len) {
     var result           = '';
     var characters       = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -124,3 +126,28 @@ module.exports.shuffle = (array)  => {
   return array;
 }
 
+module.exports.crpytoToBody = (cryptText, key) => {
+    let bytes = CryptoJS.AES.decrypt(cryptText,key);
+    return bytes.toString(CryptoJS.enc.Utf8);
+}
+
+
+module.exports.secondToHumanTime = (second) => {
+  second = Math.floor(second);
+  let saat = 60 * 60;
+  let dakika = 60;
+
+  if(second >= saat){
+    let saatkaldi = Math.floor(second / saat);
+    second = second - (saatkaldi * saat);
+    let dakikakaldi = Math.floor(second / dakika);
+    second = second - (dakika * dakikakaldi);
+    return `${saatkaldi} saat ${dakikakaldi} dakika ${second} saniye`;
+  }else if(second >= dakika){
+    let dakikakaldi = Math.floor(second / dakika);
+    second = second - (dakika * dakikakaldi);
+    return `${dakikakaldi} dakika ${second} saniye`;
+  }else{
+    return `${second} saniye`;
+  }
+}

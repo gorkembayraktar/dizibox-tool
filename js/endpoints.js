@@ -6,3 +6,7 @@ module.exports.ajaxFields = {
     comment_vote_callback: 'comment_vote_callback',
     movie_vote: 'add-vote'
 };
+
+module.exports.searchUrl = (search) => {
+    return `${this.ajax}?s=${search}&action=dwls_search`;
+}

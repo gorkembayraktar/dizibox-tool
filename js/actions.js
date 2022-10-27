@@ -286,3 +286,89 @@ module.exports.isMoviePage = async (link) => {
     }
 
 }
+
+
+module.exports.movieSearch = async (search) => {
+  
+  const data = await get(endpoints.searchUrl(search),{
+    referer: endpoints.base,
+    cookie:'_gid=GA1.2.424664200.1666614770; isTrustedUser=true; dbxu=1666856999136;'
+  });
+
+  if(data.status == 200){
+    return data.data.results;
+  }
+  return [];
+}
+
+module.exports.movieSeasons = async (url) => {
+
+  const response = await get(url,{
+    referer: url
+  });
+
+  if(response.status != 200)
+    return false;
+
+
+
+  try{
+  
+    const dom = new JSDOM(response.data);
+
+    const document = dom.window.document;
+
+    const item = document.querySelector('#seasons-list');
+    
+    const list = item.getElementsByTagName("a");
+
+ 
+    return [...list].map( item => ({
+      url:item.getAttribute('href'),
+      text:item.textContent
+    }));
+
+  
+  }catch(Exception){
+
+  }
+  
+  return false;
+}
+
+module.exports.movieSeasonParts = async (url) => {
+  const response = await get(url,{
+    referer: url
+  });
+
+  if(response.status != 200)
+    return false;
+
+
+  try{
+  
+    const dom = new JSDOM(response.data);
+
+    const document = dom.window.document;
+
+
+    const posts = document.querySelector("#category-posts");
+  
+    const articles = posts.getElementsByTagName("article");
+
+    return [...articles].map(item =>{
+
+      const title = item.querySelector(".post-title").querySelector('a');
+
+      return {
+        url:title.getAttribute('href'),
+        text: title.textContent
+      }
+    });
+
+  }catch(Exception){
+
+  }
+  
+  return false;
+}

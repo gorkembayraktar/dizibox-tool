@@ -18,6 +18,11 @@ Bu araç windows cli ile işlemler yapmak için oluşturulmuştur.
 
 ### Güncelleştirme notları
 
+27.10.2022
+
+-  (+) sevdiğiniz dizileri indirebilirsiniz. Sadece moly player üzerindeki diziler indirilebilir.
+
+
 26.10.2022
 
 -  (-) yorum id kaldırıldı, bağlantı üzerinden yorumlar liste olarak görüntülenecek. Listeden seçilen yoruma göre işlem yapılacak.
@@ -25,5 +30,8 @@ Bu araç windows cli ile işlemler yapmak için oluşturulmuştur.
 -  (+) dizinin herhangi bir bölümünü beğendim beğenmedim olarak değiştirebilirsiniz.
 
   
+
+  
+![VIDEO](./docs/diziboxtool2.gif)
 
 ![VIDEO](./docs/diziboxtool.gif)
