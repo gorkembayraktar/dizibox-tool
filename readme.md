@@ -18,6 +18,10 @@ Bu araç windows cli ile işlemler yapmak için oluşturulmuştur.
 
 ### Güncelleştirme notları
 
+20.10.2023
+
+-  (+) Tüm sezonlar tek tıkla seçimle indirilebilir.
+
 27.10.2022
 
 -  (+) sevdiğiniz dizileri indirebilirsiniz. Sadece moly player üzerindeki diziler indirilebilir.

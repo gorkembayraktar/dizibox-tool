@@ -741,6 +741,8 @@ async function comments(url){
 
 let enjected = false;
 
+
+
 async function dizi_indir(){
     
     if(!enjected){
@@ -771,7 +773,157 @@ async function dizi_indir(){
       },
     ]);
 
-     await SezonSecimi(dizi.permalink);
+    const secim = await dizi_indir_secim();
+    if(secim == 'CHAPTER'){
+        await SezonSecimi(dizi.permalink);
+    }else if(secim == 'ALL_SEASON'){
+        await TumSezonlar(dizi.permalink, dizi.post_title);
+    }
+        
+
+}
+
+async function dizi_indir_secim(){
+    const { choice } = await (
+        inquirer
+        .prompt([
+            {
+                type:'list',
+                message:'İndirme seçeneği:',
+                name:'choice',
+                choices:[
+                    {name:"Tüm Sezonlar",value:"ALL_SEASON"},
+                    {name:"Bölüm Seçimi",value:"CHAPTER" }
+                ]
+            }
+        ]));
+    return choice;
+ 
+}
+
+async function TumSezonlar(url, movie_name){
+    const seasons = await movieSeasons(url);
+
+    if(!seasons){
+        console.log("Bilgilere ulaşılamadı");
+        question();
+        return;
+     }
+
+    let totalChapter = 0;
+    for(let i = 0; i < seasons.length;i++){
+        seasons[i].parts =  await movieSeasonParts(seasons[i].url);
+        totalChapter +=  seasons[i].parts.length;
+    }
+
+    const {confirm} = await inquirer.prompt([
+        {
+            type:'confirm',
+            name:'confirm',
+            message:`Toplam: ${seasons.length} Sezon, ${totalChapter} bölümden oluşuyor. Tümünü indirmek istiyor musunuz?`
+        }
+     ]);
+    
+    if(!confirm){
+        question();
+        return;
+    }
+   
+ 
+    const source = await getSource(seasons[0].parts[0].url);
+
+    const qualities = await getQualities(source);
+    seasons[0].parts[0].qualities = qualities;
+   
+    const {quality} = await inquirer.prompt([
+       {
+           type:'list',
+           name:'quality',
+           message:'Hangi kalitede indirmek istiyorsunuz? ',
+           choices: qualities.map(i => ({name:i.size,value:{url: i.url, size:i.size}}))
+       }
+    ]);
+
+
+    // tüm kaynakları kontrol et
+    const ui = new inquirer.ui.BottomBar();
+    const anim = ['/',"|","\\","-"];
+    let counter = 0;
+    let tickInterval = setInterval(() => {
+        ui.updateBottomBar(`${anim[counter++ % anim.length]} Tüm kaynaklar kontrol ediliyor..`);
+    },250);
+    //await HELP.delaySec(1);
+
+    for(let i = 0; i < seasons.length;i++){
+        for( let k=0; k < seasons[i].parts.length; k++){
+            if( i == 0 && k == 0 ){
+                continue;
+            }
+            const s = await getSource(seasons[i].parts[k].url);
+            seasons[i].parts[k].qualities = await getQualities(s);
+            if(!seasons[i].parts[k].qualities.find(n => n.size == quality.size)){
+                // bölüm çözünürlüğüne erişilemedi
+
+                clearInterval(tickInterval);
+                ui.updateBottomBar('');
+                ui.close();
+
+                console.log("cozunurluk bulunamadı.");
+                question();
+
+                return;
+            }
+        }
+    }
+
+    ui.log.write("Kontrol sağlandı, indirilme başlatılıyor..");
+    // güncelleme textini durdur
+    clearInterval(tickInterval);
+
+    if(!fs.existsSync("./videos")){
+        fs.mkdirSync("./videos");
+    }
+    // slug
+    const slugMovie = HELP.slugify(movie_name);
+  
+    // klasör oluştur
+    if(!fs.existsSync(`./videos/${slugMovie}`)){
+        fs.mkdirSync(`./videos/${slugMovie}`);
+    }
+    let chapterCounter = 0;
+    for(let i = 0; i < seasons.length;i++){
+        // klasör oluştur
+        if(!fs.existsSync(`./videos/${slugMovie}/Sezon-${i + 1}`)){
+            fs.mkdirSync(`./videos/${slugMovie}/Sezon-${i + 1}`);
+        }
+        for( let k=0; k < seasons[i].parts.length; k++){
+            chapterCounter++;
+
+            let filename = `./videos/${slugMovie}/Sezon-${i + 1}/Bolum-${k + 1}`;
+
+            let selectedSize =  seasons[i].parts[k].qualities.find(m => m.size == quality.size)
+           
+            await stream.molyVideoDownloand(
+                selectedSize.url,
+                filename,
+                function(percantage, humanTime){
+                    ui.updateBottomBar(`(${chapterCounter}/${totalChapter}) ${movie_name}, Sezon ${i + 1}, Bölüm ${k + 1} indiriliyor.(${percantage}%)(${humanTime})`);
+                   
+                },function(){
+                    ui.log.write(`${movie_name}, Sezon ${i + 1}, Bölüm ${k + 1}. İndirme işlemi tamamlandı, dosya yolu : ${filename}.mp4`);
+                    ui.updateBottomBar('');
+                }   
+            );
+          
+            
+        }
+    }
+
+    ui.updateBottomBar('');
+    ui.log.write(`${movie_name} tüm sezonlar indirildi.`);
+    ui.close();
+
+    question();
 }
 
 async function SezonSecimi(url){
@@ -905,13 +1057,12 @@ async function getSource(link){
   let tickInterval = setInterval(() => {
       ui.updateBottomBar(`${anim[counter++ % anim.length]} Video kaynağına ulaşılıyor.`);
   },250);
-
-  await HELP.delaySec(1);
-
+  //await HELP.delaySec(1);
+  const result = await stream.molyStreamUrlResource(link);
   clearInterval(tickInterval);
   ui.updateBottomBar('');
   ui.close();
-  return stream.molyStreamUrlResource(link);
+  return result;
 }
 async function getQualities(link){
   //dizi kaynağını getir
@@ -922,12 +1073,13 @@ async function getQualities(link){
       ui.updateBottomBar(`${anim[counter++ % anim.length]} Video kaliteleri getiriliyor`);
   },250);
 
-  await HELP.delaySec(1);
+  const result = await stream.molyStreamUrlQuality(link);
 
   clearInterval(tickInterval);
   ui.updateBottomBar('');
   ui.close();
-  return stream.molyStreamUrlQuality(link);
+
+  return result;
 }
 
 async function DiziKaydet(url,filename){
