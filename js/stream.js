@@ -17,25 +17,51 @@ module.exports.molyVideoDownloand = (streamUrl, saveFileName, progress, end ) =>
             }
         });
 
-        let starttime,zaman = '',timeSec;
+        let starttime,zaman = '',timeSec = 0;
 
         req.on("progress",(segment, totalSegments) => {
+                /*
+                if (starttime) {
+                    // İlk segmentin başlangıç zamanını kaydet
+                    if (!timeSec) {
+                        timeSec = (Date.now() - starttime) / 1000;
+                    }
 
-            if(starttime){
-                // 2 segment arası geçen süre
-            
-                if(!timeSec){
-                    timeSec = (Date.now() - starttime) / 1000;
+                    // Şu anki zamanı hesapla
+                    const currentTime = Date.now() - starttime;
+                    const remainingSegments = totalSegments - segment.num;
+
+                    // Kalan zamanı hesapla
+                    const remainingTimeSec = (remainingSegments * timeSec) + (timeSec - (currentTime / 1000));
+                    zaman = secondToHumanTime(remainingTimeSec);
                 }
-                let diff = (totalSegments - segment.num) * timeSec;
-                zaman = secondToHumanTime(diff);
-            }
 
-            progress(Math.floor(segment.num / totalSegments * 100),zaman); 
-            
-            if(!starttime){
-                starttime = Date.now();
-            }
+                progress(Math.floor(segment.num / totalSegments * 100), zaman);
+
+                if (!starttime) {
+                    starttime = Date.now();
+                }
+                */
+                if(starttime){
+                    if(segment.num % 3 == 1){
+                        let diff = (Date.now() - starttime) / 1000;
+                       
+                        timeSec = diff;
+                        
+                    }
+                    // Şu anki zamanı hesapla
+                    //const currentTime = Date.now() - starttime;
+                    const remainingSegments = totalSegments - segment.num;
+
+                      // Kalan zamanı hesapla
+                    const remainingTimeSec = remainingSegments * timeSec;
+                    zaman = secondToHumanTime(remainingTimeSec);
+
+                }
+                progress(Math.floor(segment.num / totalSegments * 100), zaman);
+                if(segment.num % 3 == 0 ){
+                    starttime = Date.now();
+                }
         });
         
         req.on("end", () => {
@@ -49,6 +75,7 @@ module.exports.molyVideoDownloand = (streamUrl, saveFileName, progress, end ) =>
 }
 
 module.exports.molyStreamUrlResource = async (link) => {
+
     let execute,response, fileSourceUrl;
     response = await get(link,{
         referer:link
@@ -63,11 +90,13 @@ module.exports.molyStreamUrlResource = async (link) => {
 
     fileSourceUrl = execute[1];
 
+  
+
     response = await get(fileSourceUrl, {
         referer:link
     });
 
-    const fileSource2Regex = /<iframe src="([^\s]+)"/gm;
+    const fileSource2Regex = /<iframe .* src="([^\s]+)"/gm;
 
     execute = fileSource2Regex.exec(response.data);
 

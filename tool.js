@@ -837,8 +837,7 @@ async function SezonPartSecimi(url,season){
 
 
      const qualities = await getQualities(source);
-
-
+    
      const {quality} = await inquirer.prompt([
         {
             type:'list',
@@ -907,7 +906,7 @@ async function getSource(link){
       ui.updateBottomBar(`${anim[counter++ % anim.length]} Video kaynağına ulaşılıyor.`);
   },250);
 
-  await HELP.delaySec(2);
+  await HELP.delaySec(1);
 
   clearInterval(tickInterval);
   ui.updateBottomBar('');
