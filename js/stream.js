@@ -14,34 +14,14 @@ module.exports.molyVideoDownloand = (streamUrl, saveFileName, progress, end ) =>
                     'user-agent': 'Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Mobile Safari/537.36',
                     'referer' : 'https://dbx.molystream.org'
                 }
-            }
+            },
+            liveBuffer: 60000
         });
 
         let starttime,zaman = '',timeSec = 0;
 
         req.on("progress",(segment, totalSegments) => {
-                /*
-                if (starttime) {
-                    // İlk segmentin başlangıç zamanını kaydet
-                    if (!timeSec) {
-                        timeSec = (Date.now() - starttime) / 1000;
-                    }
-
-                    // Şu anki zamanı hesapla
-                    const currentTime = Date.now() - starttime;
-                    const remainingSegments = totalSegments - segment.num;
-
-                    // Kalan zamanı hesapla
-                    const remainingTimeSec = (remainingSegments * timeSec) + (timeSec - (currentTime / 1000));
-                    zaman = secondToHumanTime(remainingTimeSec);
-                }
-
-                progress(Math.floor(segment.num / totalSegments * 100), zaman);
-
-                if (!starttime) {
-                    starttime = Date.now();
-                }
-                */
+              
                 if(starttime){
                     if(segment.num % 3 == 1){
                         let diff = (Date.now() - starttime) / 1000;
@@ -64,8 +44,13 @@ module.exports.molyVideoDownloand = (streamUrl, saveFileName, progress, end ) =>
                 }
         });
         
+        req.on('error', (err) => {
+            end({e: err, status: false});
+            resolve();
+        });
+
         req.on("end", () => {
-            end();
+            end({status: true});
             resolve();
         });
         req.pipe(fs.createWriteStream(`${saveFileName}.mp4`));

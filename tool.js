@@ -944,8 +944,13 @@ async function TumSezonlar(url, movie_name){
                 function(percantage, humanTime){
                     ui.updateBottomBar(`(${chapterCounter}/${totalChapter}) ${movie_name}, Sezon ${i + 1}, Bölüm ${k + 1} indiriliyor.(${percantage}%)(${humanTime})`);
                    
-                },function(){
-                    ui.log.write(`${movie_name}, Sezon ${i + 1}, Bölüm ${k + 1}. İndirme işlemi tamamlandı, dosya yolu : ${filename}.mp4`);
+                },function(result){
+                    if(result.status){
+                        ui.log.write(`${movie_name}, Sezon ${i + 1}, Bölüm ${k + 1}. İndirme işlemi tamamlandı, dosya yolu : ${filename}.mp4`);
+                    }else{
+                        ui.log.write(`${movie_name}, Sezon ${i + 1}, Bölüm ${k + 1}. İndirme işlemi başarısız oldu.`);
+                        console.error(result.e);
+                    }
                     ui.updateBottomBar('');
                 }   
             );
