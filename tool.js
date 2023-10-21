@@ -810,11 +810,24 @@ async function TumSezonlar(url, movie_name){
         return;
      }
 
+   
+    const ui = new inquirer.ui.BottomBar();
+    const anim = ['/',"|","\\","-"];
+    let counter = 0;
+   
+    // tüm kaynakları kontrol et
+    let sourceInterval = setInterval(() => {
+        ui.updateBottomBar(`${anim[counter++ % anim.length]} Tüm kaynaklar hesaplanıyor${".".repeat(counter % 3 + 1) }`);
+    },250);
+
     let totalChapter = 0;
     for(let i = 0; i < seasons.length;i++){
         seasons[i].parts =  await movieSeasonParts(seasons[i].url);
         totalChapter +=  seasons[i].parts.length;
     }
+
+    ui.updateBottomBar('');
+    clearInterval(sourceInterval);
 
     const {confirm} = await inquirer.prompt([
         {
@@ -834,7 +847,6 @@ async function TumSezonlar(url, movie_name){
 
     const qualities = await getQualities(source);
     seasons[0].parts[0].qualities = qualities;
-   
     const {quality} = await inquirer.prompt([
        {
            type:'list',
@@ -844,15 +856,20 @@ async function TumSezonlar(url, movie_name){
        }
     ]);
 
+    let find = seasons[0].parts[0].qualities.find(n => n.size == quality.size);
+    if(find){
+        seasons[0].parts[0].quality = find;
+    }else if(seasons[0].parts[0].qualities[0]){
+        seasons[0].parts[0].quality = seasons[0].parts[0].qualities[0];
+    }
 
     // tüm kaynakları kontrol et
-    const ui = new inquirer.ui.BottomBar();
-    const anim = ['/',"|","\\","-"];
-    let counter = 0;
     let tickInterval = setInterval(() => {
         ui.updateBottomBar(`${anim[counter++ % anim.length]} Tüm kaynaklar kontrol ediliyor..`);
     },250);
     //await HELP.delaySec(1);
+
+    let notFoundCounter = 0;
 
     for(let i = 0; i < seasons.length;i++){
         for( let k=0; k < seasons[i].parts.length; k++){
@@ -861,19 +878,35 @@ async function TumSezonlar(url, movie_name){
             }
             const s = await getSource(seasons[i].parts[k].url);
             seasons[i].parts[k].qualities = await getQualities(s);
-            if(!seasons[i].parts[k].qualities.find(n => n.size == quality.size)){
+            let find = seasons[i].parts[k].qualities.find(n => n.size == quality.size);
+            if(find){
+                seasons[i].parts[k].quality = find;
+            }else if(seasons[i].parts[k].qualities[0]){
+                seasons[i].parts[k].quality = seasons[i].parts[k].qualities[0];
+            }else{
                 // bölüm çözünürlüğüne erişilemedi
-
-                clearInterval(tickInterval);
-                ui.updateBottomBar('');
-                ui.close();
-
-                console.log("cozunurluk bulunamadı.");
-                question();
-
-                return;
+                ui.log.write(`${movie_name}, Sezon ${i + 1}, Bölüm ${k + 1} kaynağına erişilemedi.`);
+                notFoundCounter++;
             }
+               
+            
         }
+    }
+    
+    if(notFoundCounter > 0){
+
+        const {confirm2} = await inquirer.prompt([
+            {
+                type:'confirm',
+                name:'confirm2',
+                message:`Toplam ${notFoundCounter} bölüm kaynağına erişelemedi, devam etmek istiyor musunz?`
+            }
+         ]);
+
+         if(!confirm2){
+            question();
+            return;
+         }
     }
 
     ui.log.write("Kontrol sağlandı, indirilme başlatılıyor..");
@@ -899,12 +932,14 @@ async function TumSezonlar(url, movie_name){
         for( let k=0; k < seasons[i].parts.length; k++){
             chapterCounter++;
 
-            let filename = `./videos/${slugMovie}/Sezon-${i + 1}/Bolum-${k + 1}`;
+            let filename = `./videos/${slugMovie}/Sezon-${i + 1}/${slugMovie}-s${i+1}-b${k + 1}`;
 
-            let selectedSize =  seasons[i].parts[k].qualities.find(m => m.size == quality.size)
-           
+            if(!seasons[i].parts[k].quality){
+                ui.log.write(`( KAYNAK ERISILEMEDIGINDEN GECILDI ) ${movie_name}, Sezon ${i + 1}, Bölüm ${k + 1}.`);
+                continue;
+            }
             await stream.molyVideoDownloand(
-                selectedSize.url,
+                seasons[i].parts[k].quality.url,
                 filename,
                 function(percantage, humanTime){
                     ui.updateBottomBar(`(${chapterCounter}/${totalChapter}) ${movie_name}, Sezon ${i + 1}, Bölüm ${k + 1} indiriliyor.(${percantage}%)(${humanTime})`);
