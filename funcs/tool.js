@@ -3,7 +3,7 @@ const figlet = require('figlet');
 
 const fs = require('fs');
 
-const HELP = require('./js/help');
+const HELP = require('../js/help');
 const {login,
     like,
     createAccount, 
@@ -13,13 +13,16 @@ const {login,
     movieSearch,
     movieSeasons,
     movieSeasonParts
-} = require('./js/actions');
-const file = require('./js/file');
-const {settings} = require('./js/settings');
+} = require('../js/actions');
+const file = require('../js/file');
+const {settings} = require('../js/settings');
 
-const stream = require('./js/stream');
+const stream = require('../js/stream');
 
 console.clear();
+
+
+
 
 (async function(){
 

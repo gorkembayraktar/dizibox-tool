@@ -1,7 +1,7 @@
 'use strict';
 
-const p = require('./js/process');
-const {getAccountsCount,isNumeric} = require('./js/help')
+const p = require('../js/process');
+const {getAccountsCount,isNumeric} = require('../js/help')
 
 const readline = require('readline');
 const rl = readline.createInterface({

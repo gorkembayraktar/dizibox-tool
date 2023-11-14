@@ -1,6 +1,6 @@
 'use strict';
 
-const {generateAccount} = require('./js/process')
+const {generateAccount} = require('../js/process')
 
 
 

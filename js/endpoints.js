@@ -1,5 +1,10 @@
-module.exports.base = 'https://www.dizibox.tv';
-module.exports.ajax = 'https://www.dizibox.tv/wp-admin/admin-ajax.php';
+require('dotenv').config()
+
+
+
+
+module.exports.base = process.env.WEBSITE;
+module.exports.ajax = `${process.env.WEBSITE.trimEnd('/')}/wp-admin/admin-ajax.php`;
 module.exports.ajaxFields = {
     login : 'ajaxlogin',
     register:'ajaxregister',

@@ -2,12 +2,15 @@
 
 Bu araç windows cli ile işlemler yapmak için oluşturulmuştur.
 
-  
+
 
 ## KURULUM
 
-`npm instal`
+`npm install`
 
+
+#### Domain Değişikliği
+-- Eğer güncel tarihte ilgili domain erişilemez durumda ise .env dosyasında WEBSITE=(yeni domain) olarak tanımlama yapmanız gerekmektedir.
   
 
 ## ÇALIŞTIRMA
@@ -17,6 +20,9 @@ Bu araç windows cli ile işlemler yapmak için oluşturulmuştur.
   
 
 ### Güncelleştirme notları
+
+14.11.2023
+-  (+) Website domain adresi değişebildiği için, .env dosyasında WEBSITE=(yeni domain) olarak güncel adres tanımlanabilir.
 
 20.10.2023
 

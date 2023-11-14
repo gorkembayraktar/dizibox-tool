@@ -1,6 +1,6 @@
-const HELP = require('./js/help')
-const action = require('./js/actions')
-const file = require('./js/file')
+const HELP = require('../js/help')
+const action = require('../js/actions')
+const file = require('../js/file')
 
 
 
